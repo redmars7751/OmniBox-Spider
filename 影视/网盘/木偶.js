@@ -2,7 +2,7 @@
 // @author 
 // @description 刮削：支持，弹幕：支持，嗅探：支持
 // @dependencies: axios, cheerio
-// @version 1.0.0
+// @version 1.0.1
 // @downloadURL https://gh-proxy.org/https://github.com/Silent1566/OmniBox-Spider/raw/refs/heads/main/影视/网盘/木偶.js
 
 // 引入 OmniBox SDK
@@ -734,7 +734,7 @@ async function detail(params, context) {
       }
     }
 
-    OmniBox.log("info", `解析完成,找到 ${panUrls.length} 个网盘链接`);
+    OmniBox.log("info", `解析完成,找到网盘链接： ${JSON.stringify(panUrls)}`);
 
     const playSources = [];
 
@@ -769,7 +769,7 @@ async function detail(params, context) {
           return null;
         }
 
-        OmniBox.log("info", `获取文件列表成功,文件数量: ${fileList.files.length}`);
+        OmniBox.log("info", `从分享链接 ${shareURL} 获取文件列表成功,文件数量: ${fileList.files.length}`);
 
         const allVideoFiles = await getAllVideoFiles(shareURL, fileList.files, "0");
 
@@ -781,8 +781,6 @@ async function detail(params, context) {
         OmniBox.log("info", `递归获取视频文件完成,视频文件数量: ${allVideoFiles.length}`);
 
         // 刮削处理
-        let scrapingSuccess = false;
-
         try {
           OmniBox.log("info", `开始执行刮削处理,资源名: ${vodName}, 视频文件数: ${allVideoFiles.length}`);
 
@@ -798,7 +796,7 @@ async function detail(params, context) {
 
           OmniBox.log("info", `文件ID格式转换完成,示例: ${videoFilesForScraping[0]?.fid || "N/A"}`);
 
-          const scrapingResult = await OmniBox.processScraping(videoId, vodName, vodName, videoFilesForScraping);
+          const scrapingResult = await OmniBox.processDriveScraping(shareURL, vodName, vodName, videoFilesForScraping);
           OmniBox.log("info", `刮削处理完成,结果: ${JSON.stringify(scrapingResult).substring(0, 200)}`);
           scrapingSuccess = true;
         } catch (error) {
@@ -814,8 +812,8 @@ async function detail(params, context) {
         let scrapeType = "";
 
         try {
-          OmniBox.log("info", `开始获取元数据,videoId: ${videoId}`);
-          const metadata = await OmniBox.getScrapeMetadata(videoId);
+          OmniBox.log("info", `开始获取元数据,videoId: ${params.videoId}`);
+          const metadata = await OmniBox.getDriveMetadata(shareURL);
           OmniBox.log("info", `获取元数据响应: ${JSON.stringify(metadata).substring(0, 500)}`);
 
           scrapeData = metadata.scrapeData || null;
@@ -886,6 +884,8 @@ async function detail(params, context) {
 
           const formattedFileId = fileId ? `${shareURL}|${fileId}` : "";
 
+          OmniBox.log("info",formattedFileId)
+
           let matchedMapping = null;
           if (scrapeData && videoMappings && Array.isArray(videoMappings) && videoMappings.length > 0) {
             for (const mapping of videoMappings) {
@@ -896,7 +896,6 @@ async function detail(params, context) {
                   fileName = newFileName;
                   OmniBox.log("info", `应用刮削文件名: ${file.file_name} -> ${fileName}`);
                 }
-                break;
               }
             }
           }
@@ -1158,7 +1157,7 @@ async function play(params, context) {
     let episodeName = params.episodeName || "";
 
     try {
-      let metadata = await OmniBox.getScrapeMetadata(params.vodId);
+      let metadata = await OmniBox.getDriveMetadata(shareURL);
 
       if (metadata && metadata.scrapeData && metadata.videoMappings) {
         const formattedFileId = fileId ? `${shareURL}|${fileId}` : "";
